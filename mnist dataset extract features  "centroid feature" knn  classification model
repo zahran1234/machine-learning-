@@ -1,0 +1,128 @@
+# Import Libraries
+
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from keras.datasets import mnist
+import numpy as np
+
+#collect mnist dataset
+
+(train_X, train_y), (test_X, test_y) = mnist.load_data()
+# use 10000 from 70000 samples
+y = train_y[:10000]
+X = train_X[:10000]
+
+#divide the image into celles
+def split(array, nrows, ncols):
+    r, h = array.shape
+
+    return (array.reshape(h // nrows, nrows, -1, ncols)
+            .swapaxes(1, 2)
+            .reshape(-1, nrows, ncols))
+
+#get cetroid
+def centroid(matrix, X, Y):
+    y = 0
+    x = 0
+    counter = 0
+    my_mat = []
+    for i in range(X):
+        for j in range(Y):
+            if matrix[i][j] == 0:
+                list = [[j, i]]
+                my_mat.append([j, Y - i])
+                counter += 1
+
+    for i in my_mat:
+        x = x + i[0]
+        y = y + i[1]
+    if counter == 0:
+        return 0, 0
+
+    return (x / counter), (y / counter)
+
+# save centroid data
+new_data = np.empty((1, 32))
+list = []
+
+for phote in X:
+    x2 = 0
+    y2 = 0
+    row = []
+    list = split(phote, 7, 7)
+
+    for i in list:
+        x1, y1 = centroid(i, 7, 7)
+        row.append(x1)
+        row.append(y1)
+    new_data = np.vstack([new_data, row])
+new_data = np.delete(new_data, 0, 0)
+print(" ")
+#9000 samples for train the model 1000 samples for test
+[X_train, X_test, y_train, y_test] = train_test_split(new_data, y, test_size=0.1, random_state=44, shuffle=True)
+
+# KNN
+
+KNNClassifierModel = KNeighborsClassifier(n_neighbors=4, weights='distance', algorithm='auto')
+KNNClassifierModel.fit(X_train, y_train)
+
+# Calculating Details
+#print('KNNClassifierModel Train Score is : ', 100 * KNNClassifierModel.score(X_train, y_train))
+print('KNNClassifierModel Test Score is : ', 100 * KNNClassifierModel.score(X_test, y_test))
+print('----------------------------------------------------')
+
+# Calculating Prediction
+y_pred = KNNClassifierModel.predict(X_test)
+# y_pred_prob = KNNClassifierModel.predict_proba(X_test)
+print('Predicted Value for KNNClassifierModel is : ', y_pred[:20])
+print('y Value for KNNClassifierModel is :         ', y_test[:20])
+
+
+
+
+#Implementation of knn
+class KNN:
+    # euclidean_distance(x, x_train)
+
+    def __init__(self, k):
+        self.k = k  # store K (K is Number of nearest neighbour)
+
+    def fit(self, X, y):
+        self.X_train = X
+        self.y_train = y
+
+    def predict(self, z):
+        list_for_all_distances = []
+        list_for_min_distance_classes = []
+        for i in self.X_train:
+            list_for_all_distances.append(np.linalg.norm(z - i))
+
+        for x in range(self.k):
+            min_distance = min(list_for_all_distances)
+            index = list_for_all_distances.index(min_distance)
+            list_for_all_distances[index] = float('inf')
+            list_for_min_distance_classes.append(self.y_train[index])
+        predicted_class = list_for_min_distance_classes.count(0)
+        for x in range(10):
+            if predicted_class < list_for_min_distance_classes.count(x):
+                predicted_class = x
+        return predicted_class
+
+    def score(self, X_test, Y_test):
+
+        counter = 0
+        counter_for_acc = 0
+        for i in X_test:
+            if self.predict(i) == Y_test[counter]:
+                counter_for_acc += 1
+            counter += 1
+
+        return (counter_for_acc / counter) * 100
+
+
+knn = KNN(10)
+knn.fit(new_data[:9000], y[:9000])
+print("_____________________________________________________")
+print(knn.score(new_data[9000:10000], y[9000:10000]))
+
+
